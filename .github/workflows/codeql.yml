@@ -26,8 +26,10 @@ env:
 
 jobs:
   analyze:
-    name: Analyze code with CodeQL
+    name: Build and analyze
     runs-on: windows-2022
+    env:
+      BUILD_WRAPPER_OUT_DIR: build_wrapper_output_directory # Directory where build-wrapper output will be placed
     permissions:
       actions: read
       contents: read
@@ -63,3 +65,15 @@ jobs:
       uses: github/codeql-action/analyze@v2
       with:
         category: "/language:cpp"
+        
+    - name: Install sonar-scanner and build-wrapper
+      uses: SonarSource/sonarcloud-github-c-cpp@v1
+      
+    - name: Run build-wrapper
+      run: build-wrapper-win-x86-64 --out-dir ${{ env.BUILD_WRAPPER_OUT_DIR }} msbuild NppExec/NppExec_VC2022.sln /m /p:Configuration="Release" /p:Platform="x64"
+    - name: Run sonar-scanner
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+      run: |
+        sonar-scanner --define sonar.cfamily.build-wrapper-output="${{ env.BUILD_WRAPPER_OUT_DIR }}"
